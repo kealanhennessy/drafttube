@@ -33,6 +33,11 @@ class Reader():
             g = self.geo
         return self.n_pt_x(g[col_n][0])[0], self.n_pt_x(g[col_n][0])[1], self.pt_y(g[col_n][1]), self.pt_z(g[col_n][2]), self.pt_size(g[col_n][3])
 
+    def collate_pt(self, col_n, g=None):
+        if g is None:
+            g = self.geo
+        return self.n_pt_x(g[col_n][0])[0], self.n_pt_x(g[col_n][0])[1], self.pt_y(g[col_n][1]), self.pt_z(g[col_n][2])
+    
     def collate_3d(self, col_n, g=None):
         if g is None:
             g = self.geo
@@ -42,3 +47,8 @@ class Reader():
         if g is None:
             g = self.geo
         return self.n_pt_x(g[col_n][0])[1], self.pt_y(g[col_n][1])
+    
+    def size(self, g=None):
+        if g is None:
+            g = self.geo
+        return len(g)
