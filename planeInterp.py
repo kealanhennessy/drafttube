@@ -13,15 +13,17 @@ class planeInterpolator():
         """Read the points from the cone and return all 360 points per layer"""
         geo = Reader("drafttube_shapes/baseline" + self.num +"/geo/cone.geo", cascade=False)
         allPoints = []
-        t = [i for i in range(0, 360)]
+        t = [i for i in range(-180, 180)]
         t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
-        for k in range(1, 129):
+        for k in range(129):
             pts = []
             points_final = []
-            if k == 1:
-                index = list(range(256))
+            if k ==128 :
+                index = list(range(16384,16512))
+            elif not k%2 == 0:
+                index = [1+((k-1)*128)]+list(range((k-1)*(128)+2, 256*(k+1)//2, 2))
             else:
-                index = list(range((k-1)*128, (k-1)*128 + 128))
+                index = [0+(k*128)] + list(range((k*128)+3, 256*(k+2)//2, 2))
             for i in index:
                 pts.append(np.array(geo.collate_xyz(i)))
             points = np.asarray(pts)
@@ -45,26 +47,25 @@ class planeInterpolator():
         Read the points from the cone and return all 360 points per layer"""
         geo = Reader("drafttube_shapes/baseline" + self.num + "/geo/" + shape + ".geo", cascade=False)
         allPoints = []
-        t = [i for i in range(0, 360)]
+        t = [i for i in range(360)]
         t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
         k = 130
-        for k in range(65):
+        y_axis = [0,1,0]
+        for n in range(65):
             pts = []
             points_final = []
             for i in range(k, 8320, 65):
                 pts.append(np.array(geo.collate_xyz(i)))
             points = np.asarray(pts)
             points, x_mid, z_mid = self.shift2origin(points)
-            ind = self.closest_index(points[:, 1], 0)
             phi = math.pi/2 # angle of the plane
-            y_axis = [0,1,0]
-            for i in range(len(index)):
+            for i in range(len(points)):
+                points[i] = [points[i][2], points[i][1], points[i][0]]
                 pt = points[i]
                 dot_product = np.dot(y_axis, pt)
                 y = np.array(y_axis)
                 p = np.array(pt)
 
-                # account for specific quadrant, is there a function that gives these values for arccos?
                 theta_original = np.arccos(dot_product/(np.linalg.norm(p)*np.linalg.norm(y)))
                 if p[0] > 0 and p[1] >= 0:
                     theta = (math.pi/2) - theta_original
@@ -74,8 +75,8 @@ class planeInterpolator():
                     theta = (math.pi/2) + theta_original
                 else:
                     theta = (5*math.pi/2) - theta_original
-                    r = np.linalg.norm(p)
-                    points[i] = [r, theta, 0]
+                r = np.linalg.norm(p)
+                points[i] = [r, theta, 0]
             f = self.interp(points)
             r_values = f(t_rad)
             for i in range(len(t)):
@@ -84,21 +85,29 @@ class planeInterpolator():
                 xf = x + x_mid
                 zf = z + z_mid
                 points_final.append([xf, y, zf])
-            points_final = np.array(points_final)
             allPoints.append(points_final)
+            k+=1
         return allPoints
 
     def elbow_interp(self):
         "Read points from elbow and returns all of the 360 points per layer"
         geo = Reader("drafttube_shapes/baseline"+ self.num + "/geo/elbow.geo", cascade=False)
         allPoints = []
-        t = [i for i in range(0, 360)]
+        t = [i for i in range(360)]
         t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
         for k in range(1, 66):
             pts = []
             points_final = []
             if k == 1:
-                index = list(range(256))
+                index = []
+                for i in range(0,256):
+                    if np.array(math.isclose(geo.collate_xyz(i)[2], -0.49779999256134033, abs_tol = 0.0000000000000001)):
+                        index.append(i)
+            elif k ==2:
+                index = []
+                for i in range(0,256):
+                    if not np.array(math.isclose(geo.collate_xyz(i)[2], -0.49779999256134033, abs_tol = 0.0000000000000001)):
+                        index.append(i)
             elif k <= 30 or (k>=34 and k<=63):
                 index = list(range((k-1)*128, (k-1)*128 + 128))
             elif k == 32:
@@ -114,16 +123,23 @@ class planeInterpolator():
             points = np.asarray(pts)
             points, x_mid, z_mid = self.shift2origin(points)
 
+            #find angle of the plane
             ind = self.closest_index(points[:, 1], 0)
-            phi = np.arctan(np.array(abs(points[ind][2]/points[ind][0]))) # angle of the plane
+            if(not points[ind][0] == 0):
+                phi = np.arctan(np.array(abs(points[ind][2]/points[ind][0]))) # angle of the plane
+            else:
+                phi = math.pi/2
+            
+            #find r and theta
             y_axis = [0,1,0]
             for i in range(len(index)):
+                if phi == math.pi/2:
+                    points[i] = [points[i][2], points[i][1], points[i][0]]
                 pt = points[i]
                 dot_product = np.dot(y_axis, pt)
                 y = np.array(y_axis)
                 p = np.array(pt)
 
-                # account for specific quadrant, is there a function that gives these values for arccos?
                 theta_original = np.arccos(dot_product/(np.linalg.norm(p)*np.linalg.norm(y)))
                 if p[0] > 0 and p[1] >= 0:
                     theta = (math.pi/2) - theta_original
@@ -133,17 +149,19 @@ class planeInterpolator():
                     theta = (math.pi/2) + theta_original
                 else:
                     theta = (5*math.pi/2) - theta_original
-                    r = np.linalg.norm(p)
-                    points[i] = [r, theta, 0]
+                r = np.linalg.norm(p)
+                points[i] = [r, theta, 0]
+            #interpolate r and theta       
             f = self.interp(points)
             r_values = f(t_rad)
+            
             for i in range(len(t)):
                 point = [r_values[i]*np.cos(t_rad[i]), r_values[i]*np.sin(t_rad[i]), 0]
                 x, y, z = self.plane_rotation(phi,point)
                 xf = x + x_mid
                 zf = z + z_mid
                 points_final.append([xf, y, zf])
-            points_final = np.array(points_final)
+            #points_final = np.array(points_final)
             allPoints.append(points_final)
         return allPoints
 
@@ -154,7 +172,7 @@ class planeInterpolator():
         r_theta_sorted = r_theta[sort,:] # sorted pairs
         r_plot = [r_theta_sorted[i][0] for i in range(len(r_theta_sorted))] # get r values form sorted
         theta_plot = [r_theta_sorted[i][1] for i in range(len(r_theta_sorted))] # get theta values from sorted
-        f = interpolate.PchipInterpolator(theta_plot, r_plot, extrapolate = True)
+        f = interpolate.PchipInterpolator(theta_plot, r_plot)
         return f
 
     def shift2origin(self, points):
