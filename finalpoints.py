@@ -6,34 +6,42 @@ import scipy.integrate as integrate
 from planeInterp import *
 
 class FinalPoints():
-    def points(self, spacing):
-        """ spacing is either equal, e, or chebyshev, c"""
-        cone1, elbow1, connector1, middle1, diffuser1 = self.line_interp_set("1")
-        cone4, elbow4, connector4, middle4, diffuser4 = self.line_interp_set("4")
-        cone5, elbow5, connector5, middle5, diffuser5 = self.line_interp_set("5")
-        numberPointsTube = 100
-        x0, y0, z0 = self.line_interp(cone1, elbow1, connector1, middle1, diffuser1, 0, num = numberPointsTube)
-        x179, y179, z179= self.line_interp(cone1, elbow1, connector1, middle1, diffuser1, 179, num = numberPointsTube)
-        x04, y04, z04 = self.line_interp(cone4, elbow4, connector4, middle4, diffuser4, 0, num = numberPointsTube)
-        x1794, y1794, z1794= self.line_interp(cone4, elbow4, connector4, middle4, diffuser4, 179, num = numberPointsTube)
-        x05, y05, z05= self.line_interp(cone5, elbow5, connector5, middle5, diffuser5, 0, num = numberPointsTube)
-        x1795, y1795, z1795= self.line_interp(cone5, elbow5, connector5, middle5, diffuser5, 179, num = numberPointsTube)
+    def __init__(self):
+        self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1 = self.line_interp_set("1")
+        self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4 = self.line_interp_set("4")
+        self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5 = self.line_interp_set("5")
 
-        xorigin = [(x179[i]+x0[i]+x1794[i]+x04[i]+x1795[i]+x05[i])/6 for i in range(len(x0))]
-        zorigin = [(z179[i]+z0[i]+z1794[i]+z04[i]+z1795[i]+z05[i])/6 for i in range(len(x0))]
-        originPoints = [(xorigin[i], zorigin[i]) for i in range(len(xorigin))]
-        tck, u = interpolate.splprep((xorigin, zorigin), s=0)
+
+        self.numberPointsTube = 100
+        x0, y0, z0 = self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, 0, num = self.numberPointsTube)
+        x179, y179, z179= self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, 179, num = self.numberPointsTube)
+        x04, y04, z04 = self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, 0, num = self.numberPointsTube)
+        x1794, y1794, z1794= self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, 179, num = self.numberPointsTube)
+        x05, y05, z05= self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, 0, num = self.numberPointsTube)
+        x1795, y1795, z1795= self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, 179, num = self.numberPointsTube)
+
+        self.xorigin = [(x179[i]+x0[i]+x1794[i]+x04[i]+x1795[i]+x05[i])/6 for i in range(len(x0))]
+        self.zorigin = [(z179[i]+z0[i]+z1794[i]+z04[i]+z1795[i]+z05[i])/6 for i in range(len(x0))]
+
+    def points(self, tubeNum, spacing):
+        """ spacing is either equal, e, or chebyshev, c"""
+        tck, u = interpolate.splprep((self.xorigin, self.zorigin), s=0)
         numPlanes = 2000;
         if spacing =="e":
             points = np.linspace(0, 1, numPlanes, endpoint=False) #equal spacing
-        elif space == "c"
+        elif spacing == "c":
             points = [(1-math.cos(math.pi*(2*(k+1)-1)/(2*numPlanes)))/2 for k in range(numPlanes)] #chebyshev spacing
         xPo, zPo= interpolate.splev(points, tck, der = 0)
         xDer, zDer= interpolate.splev(points, tck, der = 1)
 
         allLines = []
         for i in range(360):
-            xf, yf, zf = self.line_interp(cone1, elbow1, connector1, middle1, diffuser1, i, num = 100)
+            if tubeNum == 1:
+                xf, yf, zf = self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, i, num = 100)
+            elif tubeNum == 4:
+                xf, yf, zf = self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, i, num = 100)
+            elif tubeNum == 5:
+                xf, yf, zf = self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, i, num = 100)
             linePoints = [[xf[j], yf[j], zf[j]] for j in range(len(xf))]
             allLines.append(linePoints)
         linePoints = allLines[0]
@@ -48,10 +56,9 @@ class FinalPoints():
             p_2 = [xDer[planeNum], 0, zDer[planeNum], d]
             a = np.sqrt((xDer[planeNum])**2 + (zDer[planeNum])**2)
             normal_vector = [xDer[planeNum]/a, 0, zDer[planeNum]/a]
-            p = Plane(Point3D(point[0], point[1], point[2]), normal_vector = (xDer[planeNum], 0, zDer[planeNum])) # perpendicular plane
             for j in range(360):
                 line = allLines[j]
-                point1, point2 = closest2index2(line, normal_vector, point, planeNum/numPlanes)
+                point1, point2 = self.closest2index2(line, normal_vector, point, planeNum/numPlanes)
                 line = line[point1] + [line[point2][i]-line[point1][i] for i in range(3)]
                 t = (p_2[3] - (p_2[0]*line[0] +p_2[1]*line[1]+  +p_2[2]*line[2]))/(p_2[0]*line[3] +p_2[1]*line[4] + p_2[2]*line[5])
                 finalPoint = [(line[0]+t*line[3]), (line[1]+t*line[4]), (line[2]+t*line[5])]
@@ -59,15 +66,15 @@ class FinalPoints():
             everyPoint.append(newPlane)
         return everyPoint
 
-    def originLength(self):
-        length = 0
-        origindistance = []
-        for j in range(len(xorigin)-1):
-            if j == 0:
-                origindistance.append(((xorigin[j] - xorigin[j+1])**2 + (zorigin[j] - zorigin[j+1])**2)**0.5)
-            else:
-                origindistance.append((((xorigin[j] - xorigin[j+1])**2 + (zorigin[j] - zorigin[j+1])**2)**0.5) + origindistance[j-1])
-        return  origindistance[len(origidistance)-1]
+    #def originLength(self):
+    #    length = 0
+    #    origindistance = []
+    #    for j in range(len(self.xorigin)-1):
+    #        if j == 0:
+    #            origindistance.append(((self.xorigin[j] - self.xorigin[j+1])**2 + (self.zorigin[j] - self.zorigin[j+1])**2)**0.5)
+    #        else:
+    #            origindistance.append((((self.xorigin[j] - self.xorigin[j+1])**2 + (self.zorigin[j] - self.zorigin[j+1])**2)**0.5) + origindistance[j-1])
+    #    return  origindistance[len(origidistance)-1]
 
 
     def line_interp_set(self, num):
@@ -202,18 +209,29 @@ class FinalPoints():
         """points is a list of [x, y, z] points and plane is by [a, b, c, d], where ax+by+cz+d = 0"""
         # a is how far along the line the plane is from 0 to 1
         dist = []
-        for i in range(len(linePoints)):
+        index = math.floor(a*len(linePoints)) # gives the index along the line that is near the point
+        b = math.floor(0.2*len(linePoints)) # 0.1 is arbitrary, need to choose a number that will limit search
+        #print(index)
+        c = index - b
+        if c < 0 :
+            c = 0
+        d = index+b
+        if d>len(linePoints):
+            d = len(linePoints)
+        testPoints = np.array(np.linspace(c, d , d - c, endpoint=False))
+        for i in testPoints:
+            i = int(i)
             vector = [linePoints[i][0]-point[0], linePoints[i][1]-point[1], linePoints[i][2]-point[2]]
             normal_distance = np.abs(np.dot(vector, normal_vector))
-            dist.append(normal_distance)
+            dist.append([i, normal_distance])
             distance = (((point[0]-linePoints[i][0])**2) + ((point[1]-linePoints[i][1])**2) + ((point[2]-linePoints[i][2])**2))**0.5
             if distance > 1:
-                dist[i] += 10
-        closest = min(range(len(dist)), key = lambda i: (dist[i]))
-        dist1 = dist[closest]
+                dist[len(dist)-1][1] += 10
+        closest = min(range(len(dist)), key = lambda i: (dist[i][1]))
+        dist1 = dist[closest][1]
         secondvalue = 1000
         for i in range(len(dist)):
-            if dist[i] < secondvalue and dist[i] > dist1:
+            if dist[i][1] < secondvalue and dist[i][1] > dist1:
                 second = i
-                secondvalue = dist[i]
-        return closest, second
+                secondvalue = dist[i][1]
+        return dist[closest][0], dist[second][0]
