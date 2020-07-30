@@ -108,7 +108,7 @@ class planeInterpolator():
                 for i in range(0,256):
                     if not np.array(math.isclose(geo.collate_xyz(i)[2], -0.49779999256134033, abs_tol = 0.0000000000000001)):
                         index.append(i)
-            elif k <= 30 or (k>=34 and k<=63):
+            elif k <= 31 or (k>=34 and k<=63):
                 index = list(range((k-1)*128, (k-1)*128 + 128))
             elif k == 32:
                 index = list(range(3969, 4051, 2))+list(range(4050, 4098, 2))+list(range(4099, 4147, 2))+list(range(4146, 4223, 2))
