@@ -27,17 +27,19 @@ class FinalPoints():
         for i in range(17):
             self.xorigin[i] = -0.1
 
-        self.xorigin.extend([x1794[i] - 0.12 for i in range(63, 80)])
-        self.zorigin.extend([z1794[i] + 0.025 for i in range(63, 80)])
+        self.xorigin.extend([x1794[i] - 0.12 for i in range(63, 79)])
+        self.zorigin.extend([z1794[i] + 0.025 for i in range(63, 79)])
 
-        self.xorigin.extend([2.33, 2.38, 2.43, 2.48, 2.53, 2.58, 2.63, 2.68])
-        self.zorigin.extend([-0.583, -0.571, -0.56, -0.545, -0.53, -0.515, -0.5, -0.4845])
 
-        self.xorigin.extend([x179[i] +0.03 for i in range(85, 95)])
-        self.zorigin.extend([z179[i] +0.267 for i in range(85, 95)])
-        self.xorigin.extend([x0[i] for i in range(95, 100)])
-        self.zorigin.extend([z0[i] -0.808 for i in range(95, 100)])
-        self.zorigin[94] = -0.3868966566382473
+        final = 3.4639191327609593
+        distx = self.xorigin[-1] - self.xorigin[-2]
+        distz = self.zorigin[-1] - self.zorigin[-2]
+
+        while self.xorigin[len(self.xorigin)-1]  < final:
+            self.xorigin.append(self.xorigin[-1]+distx)
+            self.zorigin.append(self.zorigin[-1]+distz)
+        self.xorigin[-1] = final
+        self.zorigin[-1] = self.zorigin[-2]
 
     def points(self, tubeNum, spacing):
         """ take the lines of points and returns the x, y, z coordinates of the points and angles of the planes
@@ -46,8 +48,10 @@ class FinalPoints():
         numPlanes = 2000;
         if spacing =="e":
             points = np.linspace(0, 1, numPlanes) #equal spacing
+            #print(points)
         elif spacing == "c":
-            points = [(1-math.cos(math.pi*(2*(k+1)-1)/(2*numPlanes)))/2 for k in range(numPlanes)] #chebyshev spacing
+            points = [(1-math.cos(math.pi*(2*(k+1)-2)/(2*numPlanes-2)))/2 for k in range(numPlanes)] #chebyshev spacing
+            #print(points)
         xPo, zPo= interpolate.splev(points, tck, der = 0)
         xDer, zDer= interpolate.splev(points, tck, der = 1)
 
@@ -138,6 +142,8 @@ class FinalPoints():
                 x, y, z = self.plane_rotation(phi,point_temp)
                 xf = x + point[0]
                 zf = z + point[2]
+                if tubeNum == 1 and zf<-1.14297783e+00:
+                    zf = -1.14297783e+00
                 newPlane[i] = [xf, y, zf] # 360 points
             everyPoint.append(newPlane)
             angles.append(phi)
@@ -276,7 +282,7 @@ class FinalPoints():
         # a is how far along the line the plane is from 0 to 1
         dist = []
         index = math.floor(a*len(linePoints)) # gives the index along the line that is near the point
-        b = math.floor(0.2*len(linePoints)) # 0.1 is arbitrary, need to choose a number that will limit search
+        b = math.floor(0.22*len(linePoints)) # 0.1 is arbitrary, need to choose a number that will limit search
         c = index - b
         if c < 0 :
             c = 0
@@ -290,7 +296,9 @@ class FinalPoints():
             normal_distance = np.dot(vector, normal_vector)
             dist.append([i, normal_distance])
             distance = (((point[0]-linePoints[i][0])**2) + ((point[1]-linePoints[i][1])**2) + ((point[2]-linePoints[i][2])**2))**0.5
-            if distance > 1:
+            if distance > 1 and point[0]< 1:
+                dist[len(dist)-1][1] += 15
+            elif distance > 2:
                 dist[len(dist)-1][1] += 15
         closest = min(range(len(dist)), key = lambda i: (np.abs(dist[i][1])))
         if dist[closest][0] == 0 and np.sign(dist[closest][1]) == np.sign(dist[closest+1][1]):

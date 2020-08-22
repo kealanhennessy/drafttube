@@ -8,7 +8,7 @@ import sys
 class planeInterpolator():
     def __init__(self, baselineNum):
         self.num = baselineNum
-        
+
     def cone_interp(self):
         """Read the points from the cone and return all 360 points per layer"""
         geo = Reader("drafttube_shapes/baseline" + self.num +"/geo/cone.geo", cascade=False)
@@ -95,7 +95,10 @@ class planeInterpolator():
         allPoints = []
         t = [i for i in range(360)]
         t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
-        for k in range(1, 66):
+        first_index = range(1, 66)
+        if self.num == 1:
+            first_index = range(1, 67)
+        for k in first_index:
             pts = []
             points_final = []
             if k == 1:
@@ -108,28 +111,63 @@ class planeInterpolator():
                 for i in range(0,256):
                     if not np.array(math.isclose(geo.collate_xyz(i)[2], -0.49779999256134033, abs_tol = 0.0000000000000001)):
                         index.append(i)
-            elif k <= 31 or (k>=34 and k<=63):
+            elif k < 31 or (k>=34 and k<=63):
                 index = list(range((k-1)*128, (k-1)*128 + 128))
+            elif k == 31:
+                if self.num == 1:
+                    index = list(range((k-1)*128+15, (k-1)*128 +114))
+                else:
+                    index = list(range((k-1)*128, (k-1)*128 + 128))
             elif k == 32:
                 index = list(range(3969, 4051, 2))+list(range(4050, 4098, 2))+list(range(4099, 4147, 2))+list(range(4146, 4223, 2))
             elif k == 33:
                 index = list(range(3968, 4050, 2))+list(range(4051, 4099, 2))+list(range(4098, 4146, 2))+list(range(4147, 4225, 2))
             elif k == 64:
                 index = list(range(8064,8093)) + list(range(8126, 8175)) + list(range(8224, 8248))+ list(range(8272, 8296)) + [8106, 8121]
+            elif k == 66:
+                pts1 = []
+                pts2 = []
+                pointSharpElbow = [-4.09009993e-01, 0,  -1.14297783e+00]
+                index1 = list(range(29*128, (29)*128 + 128))
+                for i in index1:
+                    pts1.append(np.array(geo.collate_xyz(i)))
+                index2 = list(range((30)*128+15, (30)*128 +114))
+                for i in index2:
+                    pts2.append(np.array(geo.collate_xyz(i)))
+                y_flat = np.linspace(-1.11420673e-01, 1.11420673e-01, 29)
+                first = []
+                for i in range(0, 15):
+                    first.append([-3.83750200e-01,y_flat[14-i], -1.14297783e+00])
+                pts2 = first + pts2
+                for i in range(15, len(y_flat)):
+                    pts2.append([-3.83750200e-01,y_flat[43-i], -1.14297783e+00])
+                for j in range(128):
+                    pts.append([(pts1[j][0] + pts2[j][0])/2, (pts1[j][1] + pts2[j][1])/2, (pts1[j][2] + pts2[j][2])/2])
             else:
                 index = list(range(8093,8106)) + list(range(8107, 8121)) + list(range(8122, 8126))+ list(range(8175, 8224))+list(range(8248,8272))+list(range(8296, 8320))
-            for i in index:
-                pts.append(np.array(geo.collate_xyz(i)))
+            if not k == 66:
+                for i in index:
+                    pts.append(np.array(geo.collate_xyz(i)))
+            if k == 31  and self.num ==1:
+                y_flat = np.linspace(-1.11420673e-01, 1.11420673e-01, 29)
+                for i in range(128-99):
+                    pts.append([-3.83750200e-01, y_flat[i] , -1.14297783e+00])
             points = np.asarray(pts)
             points, x_mid, z_mid = self.shift2origin(points)
-
+            if k == 66:
+                pointSharpElbow[0] = pointSharpElbow[0] - x_mid
+                current = [-3.18160576e-01 ,3.21733024e-17,-2.62123793e-01]
+                for i in range(len(points)):
+                    ratio = points[i][2]/points[i][0]
+                    points[i][0]  = points[i][0] *(pointSharpElbow[0]/current[0])
+                    points[i][2]  = ratio *points[i][0]
             #find angle of the plane
             ind = self.closest_index(points[:, 1], 0)
             if(not points[ind][0] == 0):
                 phi = np.arctan(np.array(abs(points[ind][2]/points[ind][0]))) # angle of the plane
             else:
                 phi = math.pi/2
-            
+
             #find r and theta
             y_axis = [0,1,0]
             for i in range(len(index)):
@@ -151,10 +189,10 @@ class planeInterpolator():
                     theta = (5*math.pi/2) - theta_original
                 r = np.linalg.norm(p)
                 points[i] = [r, theta, 0]
-            #interpolate r and theta       
+            #interpolate r and theta
             f = self.interp(points)
             r_values = f(t_rad)
-            
+
             for i in range(len(t)):
                 point = [r_values[i]*np.cos(t_rad[i]), r_values[i]*np.sin(t_rad[i]), 0]
                 x, y, z = self.plane_rotation(phi,point)
