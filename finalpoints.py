@@ -4,6 +4,10 @@ import math
 from scipy import interpolate
 import scipy.integrate as integrate
 from planeInterp import *
+import scipy
+import numpy.fft
+import scipy.fft
+from copy import copy, deepcopy
 
 class FinalPoints():
     def __init__(self):
@@ -40,19 +44,20 @@ class FinalPoints():
             self.zorigin.append(self.zorigin[-1]+distz)
         self.xorigin[-1] = final
         self.zorigin[-1] = self.zorigin[-2]
+        self.r_theta = []
 
     def points(self, tubeNum, spacing):
         """ take the lines of points and returns the x, y, z coordinates of the points and angles of the planes
         spacing is either equal, e, or chebyshev, c. These xyz need to be smoothed, then converted back to r, theta"""
         tck, u = interpolate.splprep((self.xorigin, self.zorigin), s=0)
-        numPlanes = 2000;
+        self.numPlanes = 20;
         if spacing =="e":
-            points = np.linspace(0, 1, numPlanes) #equal spacing
+            points = np.linspace(0, 1, self.numPlanes) #equal spacing
             #print(points)
         elif spacing == "c":
-            points = [(1-math.cos(math.pi*(2*(k+1)-2)/(2*numPlanes-2)))/2 for k in range(numPlanes)] #chebyshev spacing
+            points = [(1-math.cos(math.pi*(2*(k+1)-2)/(2*self.numPlanes-2)))/2 for k in range(self.numPlanes)] #chebyshev spacing
             #print(points)
-        xPo, zPo= interpolate.splev(points, tck, der = 0)
+        self.xPo, self.zPo= interpolate.splev(points, tck, der = 0)
         xDer, zDer= interpolate.splev(points, tck, der = 1)
 
         allLines = []
@@ -68,18 +73,19 @@ class FinalPoints():
             linePoints = [[xf[j], yf[j], zf[j]] for j in range(len(xf))]
             allLines.append(linePoints)
         everyPoint = []
+        r_theta = []
         angles = []
-        for w in range(numPlanes):
+        for w in range(self.numPlanes):
             newPlane = []
             planeNum = w
-            point = [xPo[planeNum], 0, zPo[planeNum]] # location on origin line
+            point = [self.xPo[planeNum], 0, self.zPo[planeNum]] # location on origin line
             d = np.dot(point, [xDer[planeNum], 0, zDer[planeNum]])
             p_2 = [xDer[planeNum], 0, zDer[planeNum], d]
             a = np.sqrt((xDer[planeNum])**2 + (zDer[planeNum])**2)
             normal_vector = [xDer[planeNum]/a, 0, zDer[planeNum]/a]
             for j in range(360):
                 line = allLines[j]
-                point1, point2 = self.closest2index(line, normal_vector, point, planeNum/numPlanes)
+                point1, point2 = self.closest2index(line, normal_vector, point, planeNum/self.numPlanes)
                 if np.sign(point1) == -1:
                     newPlane.append([line[99][0], line[99][1], line[99][2]])
                     continue
@@ -147,7 +153,28 @@ class FinalPoints():
                 newPlane[i] = [xf, y, zf] # 360 points
             everyPoint.append(newPlane)
             angles.append(phi)
-        return everyPoint, angles
+            r_theta.append(r_values)
+        r_theta = self.smoothing(r_theta)
+        return r_theta, everyPoint, angles
+
+    def pol2cart(self, points, angles):
+        point_cart = []
+        for w in range(self.numPlanes):
+            r_values = points[w]
+            newPlane = []
+            t = [i for i in range(360)]
+            t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
+            point = [self.xPo[w], 0, self.zPo[w]]
+            phi = angles[w]
+            for i in range(len(t)):
+                point_temp = [r_values[i]*np.cos(t_rad[i]), r_values[i]*np.sin(t_rad[i]), 0]
+                x, y, z = self.plane_rotation(phi,point_temp)
+                xf = x + point[0]
+                zf = z + point[2]
+                newPlane.append([xf, y, zf]) # 360 points
+            point_cart.append(newPlane)
+        return point_cart
+
 
     def line_interp_set(self, num):
         """sets up the baseline interpolator"""
@@ -348,3 +375,31 @@ class FinalPoints():
         y = point[1]
         z = -point[0]*np.sin(-phi) + point[2]*np.cos(-phi)
         return x, y, z
+
+    def smoothing(self, r):
+        # r is a 2D matrix that contain the radius r(z,theta) values in the matrix in this format:
+        # The columns represent different theta values at any given row
+        # The rows represent z along the origin line
+        # I.E. Each row is at a specific z on the origin line and the columns on that row represent r values at thetas from 0-2*pi
+
+        # Transforms
+        r_f1=scipy.fft.dct(r,axis=0)
+        r_f=numpy.fft.rfft(r_f1,axis=1)
+
+        # Smoothing
+        cutoff_z=5
+        cutoff_theta=120
+        r_f_smooth = deepcopy(r_f)
+
+        for k_z in range(r_f.shape[0]):
+            for k_theta in range(r_f.shape[1]):
+                if k_theta>cutoff_theta and k_z>cutoff_z:
+                    dist=-1*(k_theta**2+k_z**2)**0.5
+                    r_f_smooth[k_z,k_theta]=np.exp(dist)*r_f_smooth[k_z,k_theta]
+
+        r_if1=numpy.fft.irfft(r_f_smooth,axis=1)
+        r_smooth=scipy.fft.idct(r_if1,axis=0)
+
+        # r is the original matrix. r_smooth is the smoothed out matrix
+
+        return r_smooth
