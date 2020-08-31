@@ -13,7 +13,7 @@ class planeInterpolator():
         """Read the points from the cone and return all 360 points per layer"""
         geo = Reader("drafttube_shapes/baseline" + self.num +"/geo/cone.geo", cascade=False)
         allPoints = []
-        t = [i for i in range(-180, 180)]
+        t = np.linspace(-180, 180, 1800, endpoint = False)
         t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
         for k in range(129):
             pts = []
@@ -47,7 +47,7 @@ class planeInterpolator():
         Read the points from the cone and return all 360 points per layer"""
         geo = Reader("drafttube_shapes/baseline" + self.num + "/geo/" + shape + ".geo", cascade=False)
         allPoints = []
-        t = [i for i in range(360)]
+        t = np.linspace(0, 360, 1800, endpoint = False)
         t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
         k = 130
         y_axis = [0,1,0]
@@ -93,7 +93,7 @@ class planeInterpolator():
         "Read points from elbow and returns all of the 360 points per layer"
         geo = Reader("drafttube_shapes/baseline"+ self.num + "/geo/elbow.geo", cascade=False)
         allPoints = []
-        t = [i for i in range(360)]
+        t = np.linspace(0, 360, 1800, endpoint = False)
         t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
         first_index = range(1, 66)
         if self.num == 1:
@@ -198,6 +198,8 @@ class planeInterpolator():
                 x, y, z = self.plane_rotation(phi,point)
                 xf = x + x_mid
                 zf = z + z_mid
+                if self.num == 1 and zf < -1.14297783e+00:
+                    zf = -1.14297783e+00
                 points_final.append([xf, y, zf])
             #points_final = np.array(points_final)
             allPoints.append(points_final)

@@ -18,24 +18,24 @@ class FinalPoints():
 
 
         self.numberPointsTube = 100
-        x0, y0, z0 = self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, 0, num = self.numberPointsTube)
-        x179, y179, z179= self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, 179, num = self.numberPointsTube)
-        x04, y04, z04 = self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, 0, num = self.numberPointsTube)
-        x1794, y1794, z1794= self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, 179, num = self.numberPointsTube)
-        x05, y05, z05= self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, 0, num = self.numberPointsTube)
-        x1795, y1795, z1795= self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, 179, num = self.numberPointsTube)
-        x06, y06, z06= self.line_interp(self.cone6, self.elbow6, self.connector6, self.middle6, self.diffuser6, 0, num = self.numberPointsTube)
+        x0, y0, z0 = self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, 0, 1, num = self.numberPointsTube)
+        x179, y179, z179= self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, 899, 1, num = self.numberPointsTube)
+        x04, y04, z04 = self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, 0, 4, num = self.numberPointsTube)
+        x1794, y1794, z1794= self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, 899, 4, num = self.numberPointsTube)
+        x05, y05, z05= self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, 0, 5, num = self.numberPointsTube)
+        x1795, y1795, z1795= self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, 899, 5, num = self.numberPointsTube)
+        x06, y06, z06= self.line_interp(self.cone6, self.elbow6, self.connector6, self.middle6, self.diffuser6, 0, 6, num = self.numberPointsTube)
 
         self.xorigin = [(2*x1794[i]+x06[i]+ x05[i])/4 for i in range(0, 55)]
         self.zorigin = [(2*z1794[i]+z06[i] +z05[i])/4 for i in range(0, 55)]
         for i in range(17):
-            self.xorigin[i] = -0.1
+            self.xorigin[i] = 0
 
         self.xorigin.extend([x1794[i] - 0.12 for i in range(63, 79)])
         self.zorigin.extend([z1794[i] + 0.025 for i in range(63, 79)])
 
 
-        final = 3.4639191327609593
+        final = 3.4639191327609593 +0.1
         distx = self.xorigin[-1] - self.xorigin[-2]
         distz = self.zorigin[-1] - self.zorigin[-2]
 
@@ -50,7 +50,7 @@ class FinalPoints():
         """ take the lines of points and returns the x, y, z coordinates of the points and angles of the planes
         spacing is either equal, e, or chebyshev, c. These xyz need to be smoothed, then converted back to r, theta"""
         tck, u = interpolate.splprep((self.xorigin, self.zorigin), s=0)
-        self.numPlanes = 20;
+        self.numPlanes = 2000;
         if spacing =="e":
             points = np.linspace(0, 1, self.numPlanes) #equal spacing
             #print(points)
@@ -59,17 +59,17 @@ class FinalPoints():
             #print(points)
         self.xPo, self.zPo= interpolate.splev(points, tck, der = 0)
         xDer, zDer= interpolate.splev(points, tck, der = 1)
-
+        #print(self.xPo, self.zPo, xDer, zDer)
         allLines = []
-        for i in range(360):
+        for i in range(1800):
             if tubeNum == 1:
-                xf, yf, zf = self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, i, num = 100)
+                xf, yf, zf = self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, i, tubeNum, num = 100)
             elif tubeNum == 4:
-                xf, yf, zf = self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, i, num = 100)
+                xf, yf, zf = self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, i, tubeNum, num = 100)
             elif tubeNum == 5:
-                xf, yf, zf = self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, i, num = 100)
+                xf, yf, zf = self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, i, tubeNum, num = 100)
             elif tubeNum == 6:
-                xf, yf, zf = self.line_interp(self.cone6, self.elbow6, self.connector6, self.middle6, self.diffuser6, i, num = 100)
+                xf, yf, zf = self.line_interp(self.cone6, self.elbow6, self.connector6, self.middle6, self.diffuser6, i, tubeNum, num = 100)
             linePoints = [[xf[j], yf[j], zf[j]] for j in range(len(xf))]
             allLines.append(linePoints)
         everyPoint = []
@@ -83,7 +83,7 @@ class FinalPoints():
             p_2 = [xDer[planeNum], 0, zDer[planeNum], d]
             a = np.sqrt((xDer[planeNum])**2 + (zDer[planeNum])**2)
             normal_vector = [xDer[planeNum]/a, 0, zDer[planeNum]/a]
-            for j in range(360):
+            for j in range(1800):
                 line = allLines[j]
                 point1, point2 = self.closest2index(line, normal_vector, point, planeNum/self.numPlanes)
                 if np.sign(point1) == -1:
@@ -94,13 +94,16 @@ class FinalPoints():
                     continue
                 newPoints = np.linspace(point2/100, point1/100, 15)
                 if tubeNum == 1:
-                    x2, y2, z2 = self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, j, unew = newPoints)
+                    x2, y2, z2 = self.line_interp(self.cone1, self.elbow1, self.connector1, self.middle1, self.diffuser1, j, tubeNum, unew = newPoints)
+                    #for i in range(len(z2)):
+                    #    if z2[i] < -1.0507e+00:
+                    #        z2[i] = -1.0507e+00
                 elif tubeNum == 4:
-                    x2, y2, z2 = self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, j, unew = newPoints)
+                    x2, y2, z2 = self.line_interp(self.cone4, self.elbow4, self.connector4, self.middle4, self.diffuser4, j, tubeNum, unew = newPoints)
                 elif tubeNum == 5:
-                    x2, y2, z2 = self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, j, unew = newPoints)
+                    x2, y2, z2 = self.line_interp(self.cone5, self.elbow5, self.connector5, self.middle5, self.diffuser5, j, tubeNum, unew = newPoints)
                 elif tubeNum == 6:
-                    x2, y2, z2 = self.line_interp(self.cone6, self.elbow6, self.connector6, self.middle6, self.diffuser6, j, unew = newPoints)
+                    x2, y2, z2 = self.line_interp(self.cone6, self.elbow6, self.connector6, self.middle6, self.diffuser6, j, tubeNum, unew = newPoints)
                 point1, point2 = self.closest2index2([x2, y2, z2], normal_vector, point)
                 line = [x2[point1], y2[point1], z2[point1]] +[x2[point2]-x2[point1], y2[point2]- y2[point1],z2[point2]- z2[point1]]
                 t = (p_2[3] - (p_2[0]*line[0] +p_2[1]*line[1] +p_2[2]*line[2]))/(p_2[0]*line[3] +p_2[1]*line[4] + p_2[2]*line[5])
@@ -118,7 +121,7 @@ class FinalPoints():
             else:
                 phi = math.pi/2
             y_axis = [0,1,0]
-            for i in range(360):
+            for i in range(1800):
                 if phi == math.pi/2:
                     newPlane[i] = [newPlane[i][2], newPlane[i][1], newPlane[i][0]]
                 if phi > math.pi/2:
@@ -138,7 +141,7 @@ class FinalPoints():
                     theta = (5*math.pi/2) - theta_original
                 r = np.linalg.norm(p)
                 newPlane[i] = [r, theta, 0]
-            t = [i for i in range(360)]
+            t = np.linspace(0, 360, 1800, endpoint = False)
             t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
             print(w)
             f = self.interp(newPlane)
@@ -148,13 +151,11 @@ class FinalPoints():
                 x, y, z = self.plane_rotation(phi,point_temp)
                 xf = x + point[0]
                 zf = z + point[2]
-                if tubeNum == 1 and zf<-1.14297783e+00:
-                    zf = -1.14297783e+00
                 newPlane[i] = [xf, y, zf] # 360 points
             everyPoint.append(newPlane)
             angles.append(phi)
             r_theta.append(r_values)
-        r_theta = self.smoothing(r_theta)
+        #r_theta = self.smoothing(r_theta)
         return r_theta, everyPoint, angles
 
     def pol2cart(self, points, angles):
@@ -162,7 +163,7 @@ class FinalPoints():
         for w in range(self.numPlanes):
             r_values = points[w]
             newPlane = []
-            t = [i for i in range(360)]
+            t = np.linspace(0, 360, 1800, endpoint = False)
             t_rad = [np.deg2rad(t[i]) for i in range(len(t))]
             point = [self.xPo[w], 0, self.zPo[w]]
             phi = angles[w]
@@ -177,7 +178,7 @@ class FinalPoints():
 
 
     def line_interp_set(self, num):
-        """sets up the baseline interpolator"""
+        ''"sets up the baseline interpolator"""
         baseline1 = planeInterpolator(num)
         cone = baseline1.cone_interp()
         elbow = baseline1.elbow_interp()
@@ -186,8 +187,8 @@ class FinalPoints():
         diffuser = baseline1.cmd_interp("diffuser")
         return cone, elbow, connector, middle, diffuser
 
-    def line_interp(self, cone, elbow, connector, middle, diffuser, k, num = 50, unew = []):
-        """gives the kth line 0<=k<=359 num is a string and k is an interger"""
+    def line_interp(self, cone, elbow, connector, middle, diffuser, k, tubeNum, num = 50, unew = []):
+        """gives the kth line 0<=k<=1799 num is a string and k is an interger"""
         """num if the number of points you want for the draft tube lines"""
         """the u values can also be defined specifically with unew"""
         x = []
@@ -196,16 +197,16 @@ class FinalPoints():
         dist = 0.001
         i = 0
         for j in range(len(cone)):
-            if k<180:
+            if k<900:
                 if i == 0:
-                    x.append(cone[i][k+180][0])
-                    y.append(cone[i][k+180][1])
-                    z.append(cone[i][k+180][2]+0.10011979192495346)
+                    x.append(cone[i][k+900][0]+0.1)
+                    y.append(cone[i][k+900][1])
+                    z.append(cone[i][k+900][2]+0.10011979192495346)
                     i = i+1
                 else:
-                    xnext = cone[j][k+180][0]
-                    ynext = cone[j][k+180][1]
-                    znext = cone[j][k+180][2]+0.10011979192495346
+                    xnext = cone[j][k+900][0] +0.1
+                    ynext = cone[j][k+900][1]
+                    znext = cone[j][k+900][2]+0.10011979192495346
                     distance = (((xnext-x[i-1])**2) + ((ynext-y[i-1])**2) + ((znext-z[i-1])**2))**0.5
                     #print(distance)
                     if distance > dist:
@@ -215,14 +216,14 @@ class FinalPoints():
                         i = i+1
             else:
                 if i == 0:
-                    x.append(cone[i][k-180][0])
-                    y.append(cone[i][k-180][1])
-                    z.append(cone[i][k-180][2]+0.10011979192495346)
+                    x.append(cone[i][k-900][0]+0.1)
+                    y.append(cone[i][k-900][1])
+                    z.append(cone[i][k-900][2]+0.10011979192495346)
                     i = i+1
                 else:
-                    xnext = cone[j][k-180][0]
-                    ynext = cone[j][k-180][1]
-                    znext = cone[j][k-180][2]+0.10011979192495346
+                    xnext = cone[j][k-900][0]+0.1
+                    ynext = cone[j][k-900][1]
+                    znext = cone[j][k-900][2]+0.10011979192495346
                     distance = (((xnext-x[i-1])**2) + ((ynext-y[i-1])**2) + ((znext-z[i-1])**2))**0.5
                     if distance > dist:
                         x.append(xnext)
@@ -232,12 +233,12 @@ class FinalPoints():
         a = i
         for j in list(range(0, 31)) + [63, 64, 32, 31] + list(range(33, 63)):
             if i-a == 0:
-                x.append(elbow[i-a][k][0])
+                x.append(elbow[i-a][k][0]+0.1)
                 y.append(elbow[i-a][k][1])
                 z.append(elbow[i-a][k][2]+0.10011979192495346)
                 i = i+1
             else:
-                xnext = elbow[j][k][0]
+                xnext = elbow[j][k][0]+0.1
                 ynext = elbow[j][k][1]
                 znext = elbow[j][k][2]+0.10011979192495346
                 distance = (((xnext-x[i-1])**2) + ((ynext-y[i-1])**2) + ((znext-z[i-1])**2))**0.5
@@ -249,12 +250,12 @@ class FinalPoints():
         b = i
         for j in range(65):
             if i-b == 0:
-                x.append(connector[i-b][k][0])
+                x.append(connector[i-b][k][0]+0.1)
                 y.append(connector[i-b][k][1])
                 z.append(connector[i-b][k][2]+0.10011979192495346)
                 i = i+1
             else:
-                xnext = connector[j][k][0]
+                xnext = connector[j][k][0]+0.1
                 ynext = connector[j][k][1]
                 znext = connector[j][k][2]+0.10011979192495346
                 distance = (((xnext-x[i-1])**2) + ((ynext-y[i-1])**2) + ((znext-z[i-1])**2))**0.5
@@ -266,12 +267,12 @@ class FinalPoints():
         b = i
         for j in range(65):
             if i-b == 0:
-                x.append(middle[i-b][k][0])
+                x.append(middle[i-b][k][0]+0.1)
                 y.append(middle[i-b][k][1])
                 z.append(middle[i-b][k][2]+0.10011979192495346)
                 i = i+1
             else:
-                xnext = middle[j][k][0]
+                xnext = middle[j][k][0]+0.1
                 ynext = middle[j][k][1]
                 znext = middle[j][k][2]+0.10011979192495346
                 distance = (((xnext-x[i-1])**2) + ((ynext-y[i-1])**2) + ((znext-z[i-1])**2))**0.5
@@ -283,12 +284,12 @@ class FinalPoints():
         b = i
         for j in range(65):
             if i-b == 0:
-                x.append(diffuser[i-b][k][0])
+                x.append(diffuser[i-b][k][0]+0.1)
                 y.append(diffuser[i-b][k][1])
                 z.append(diffuser[i-b][k][2]+0.10011979192495346)
                 i = i+1
             else:
-                xnext = diffuser[j][k][0]
+                xnext = diffuser[j][k][0]+0.1
                 ynext = diffuser[j][k][1]
                 znext = diffuser[j][k][2]+0.10011979192495346
                 distance = (((xnext-x[i-1])**2) + ((ynext-y[i-1])**2) + ((znext-z[i-1])**2))**0.5
@@ -301,6 +302,10 @@ class FinalPoints():
             unew = np.linspace(0, 1, num, endpoint=False)
         tck, u = interpolate.splprep([x, y,z], s=0)
         xf, yf, zf = interpolate.splev(unew, tck, der = 0)
+        if tubeNum == 1:
+            for i in range(len(zf)):
+                if zf[i] < -1.0507 :
+                    zf[i] = -1.0507
         return xf, yf, zf
 
 
@@ -334,6 +339,7 @@ class FinalPoints():
             return -1, 0
         dist1 = dist[closest][1]
         secondvalue = 1000
+        #print(dist[closest])
         for i in range(len(dist)):
             if np.abs(dist[i][1]) < np.abs(secondvalue) and np.abs(dist[i][1]) > np.abs(dist1) and not np.sign(dist1) == np.sign(dist[i][1]):
                 second = i
